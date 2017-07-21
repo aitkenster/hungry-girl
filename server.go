@@ -1,19 +1,18 @@
 package main
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
 const ErrInvalidCoordinates = "invalid coordinates"
 
 type GooglePlacesClient struct {
 	BaseURL string
+	APIKey  string
 }
 
 func NewGooglePlacesClient(c Config) GooglePlacesClient {
 	client := GooglePlacesClient{
-		BaseURL: fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670,151.1957&radius=500&types=food&key=%s", os.Getenv("GOOGLE_API_KEY")),
+		BaseURL: "https://maps.googleapis.com/maps/api/place/nearbysearch/json?",
+		APIKey:  os.Getenv("GOOGLE_API_KEY"),
 	}
 	if c.APIBaseURL != "" {
 		client.BaseURL = c.APIBaseURL
