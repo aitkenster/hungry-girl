@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/joho/godotenv"
 )
@@ -24,4 +26,7 @@ func main() {
 		fmt.Println(err)
 	}
 	fmt.Println(places)
+	http.HandleFunc("/messenger", MessengerRequestHandler)
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
