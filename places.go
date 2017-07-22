@@ -5,16 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 )
 
-const placesLimit = 3
+const (
+	placesLimit           = 3
+	ErrInvalidCoordinates = "invalid coordinates"
+)
 
 type Location struct {
 	Latitude  float64
 	Longitude float64
 }
-
-type Placelist []Place
 
 type Place struct {
 	Name    string
@@ -22,7 +24,25 @@ type Place struct {
 	Website string
 }
 
-func (l Location) GetPlaces(client GooglePlacesClient) (*Placelist, error) {
+type GooglePlacesClient struct {
+	BaseURL string
+	APIKey  string
+}
+
+type errorResponse struct {
+	Message string `json:"message"`
+}
+
+type GooglePlacesResponse struct {
+	Results []Result `json:"results"`
+}
+
+type Result struct {
+	Name string `json:"name"`
+}
+
+func (l Location) GetPlaces() ([]Place, error) {
+	client := NewGooglePlacesClient(Config{})
 	url := fmt.Sprintf("%slocation=%v,%v&radius=500&types=food&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -37,7 +57,7 @@ func (l Location) GetPlaces(client GooglePlacesClient) (*Placelist, error) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	var p Placelist
+	var p []Place
 	numPlaces := 0
 	for _, result := range g.Results {
 		if numPlaces < placesLimit {
@@ -45,7 +65,18 @@ func (l Location) GetPlaces(client GooglePlacesClient) (*Placelist, error) {
 			numPlaces++
 		}
 	}
-	return &p, nil
+	return p, nil
+}
+
+func NewGooglePlacesClient(c Config) GooglePlacesClient {
+	client := GooglePlacesClient{
+		BaseURL: "https://maps.googleapis.com/maps/api/place/nearbysearch/json?",
+		APIKey:  os.Getenv("GOOGLE_API_KEY"),
+	}
+	if c.APIBaseURL != "" {
+		client.BaseURL = c.APIBaseURL
+	}
+	return client
 }
 
 func NewLocation(latitude, longitude float64) (*Location, error) {
