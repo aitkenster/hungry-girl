@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -17,7 +18,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	http.HandleFunc("/messenger", MessengerRequestHandler)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := os.Getenv("PORT")
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
