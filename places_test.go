@@ -19,7 +19,7 @@ func TestGetPlacesSuccess(t *testing.T) {
 	googleServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-			json.NewEncoder(w).Encode(newGooglePlacesResponse(expected))
+			json.NewEncoder(w).Encode(newGooglePlacesSearchResponse(expected))
 		}),
 	)
 	defer googleServer.Close()
@@ -34,8 +34,8 @@ func TestGetPlacesSuccess(t *testing.T) {
 	}
 }
 
-func newGooglePlacesResponse(places Placelist) GooglePlacesResponse {
-	return GooglePlacesResponse{
+func newGooglePlacesSearchResponse(places Placelist) GooglePlacesSearchResponse {
+	return GooglePlacesSearchResponse{
 		Results: []Result{
 			Result{
 				Name: places[0].Name,

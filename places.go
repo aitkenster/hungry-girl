@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 )
@@ -19,8 +20,8 @@ type Location struct {
 }
 
 type Place struct {
+	ID      string
 	Name    string
-	Stars   int
 	Website string
 }
 
@@ -33,17 +34,22 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-type GooglePlacesResponse struct {
+type GooglePlacesSearchResponse struct {
 	Results []Result `json:"results"`
 }
 
-type Result struct {
-	Name string `json:"name"`
+type GooglePlacesDetailsResponse struct {
+	Result Result `json:"result"`
 }
 
-func (l Location) GetPlaces() ([]Place, error) {
-	client := NewGooglePlacesClient(Config{})
-	url := fmt.Sprintf("%slocation=%v,%v&radius=500&types=food&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
+type Result struct {
+	Name    string `json:"name"`
+	ID      string `json:"place_id"`
+	Website string `json:"website"`
+}
+
+func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
+	url := fmt.Sprintf("%s/nearbysearch/json?location=%v,%v&radius=500&types=food&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
@@ -52,7 +58,7 @@ func (l Location) GetPlaces() ([]Place, error) {
 		fmt.Println(resp.StatusCode)
 		return nil, errors.New("error retrieving Google Places response")
 	}
-	var g GooglePlacesResponse
+	var g GooglePlacesSearchResponse
 	err = json.NewDecoder(resp.Body).Decode(&g)
 	if err != nil {
 		fmt.Println(err)
@@ -61,16 +67,41 @@ func (l Location) GetPlaces() ([]Place, error) {
 	numPlaces := 0
 	for _, result := range g.Results {
 		if numPlaces < placesLimit {
-			p = append(p, Place{Name: result.Name})
+			p = append(p, Place{
+				Name: result.Name,
+				ID:   result.ID,
+			})
 			numPlaces++
 		}
 	}
 	return p, nil
 }
 
+func (p *Place) GetWebsite(client GooglePlacesClient) error {
+	url := fmt.Sprintf("%s/details/json?placeid=%s&key=%s", client.BaseURL, p.ID, client.APIKey)
+	log.Println(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(resp.StatusCode)
+		return errors.New("error retrieving Google Places response")
+	}
+	var g GooglePlacesDetailsResponse
+	err = json.NewDecoder(resp.Body).Decode(&g)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	p.Website = g.Result.Website
+	return nil
+}
+
 func NewGooglePlacesClient(c Config) GooglePlacesClient {
 	client := GooglePlacesClient{
-		BaseURL: "https://maps.googleapis.com/maps/api/place/nearbysearch/json?",
+		BaseURL: "https://maps.googleapis.com/maps/api/place",
 		APIKey:  os.Getenv("GOOGLE_API_KEY"),
 	}
 	if c.APIBaseURL != "" {

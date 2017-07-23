@@ -64,13 +64,18 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	places, err := location.GetPlaces()
+	client := NewGooglePlacesClient(Config{})
+	places, err := location.GetPlaces(client)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	for _, place := range places {
-		sendText(FBUserID, place.Name)
+		err := place.GetWebsite(client)
+		if err != nil {
+			fmt.Println(err)
+		}
+		sendText(FBUserID, fmt.Sprintf("%s %s", place.Name, place.Website))
 	}
 }
 
