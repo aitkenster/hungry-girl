@@ -23,6 +23,7 @@ type Place struct {
 	ID      string
 	Name    string
 	Website string
+	Rating  float64
 }
 
 type GooglePlacesClient struct {
@@ -43,9 +44,10 @@ type GooglePlacesDetailsResponse struct {
 }
 
 type Result struct {
-	Name    string `json:"name"`
-	ID      string `json:"place_id"`
-	Website string `json:"website"`
+	Name    string  `json:"name"`
+	ID      string  `json:"place_id"`
+	Website string  `json:"website"`
+	Rating  float64 `json:"rating"`
 }
 
 func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
@@ -96,6 +98,7 @@ func (p *Place) GetWebsite(client GooglePlacesClient) error {
 		return err
 	}
 	p.Website = g.Result.Website
+	p.Rating = g.Result.Rating
 	return nil
 }
 

@@ -14,7 +14,7 @@ func TestGetPlacesSuccess(t *testing.T) {
 		Longitude: -122.14900441942,
 	}
 
-	expected := Placelist{Place{Name: "Bar Marsella"}}
+	expected := []Place{Place{Name: "Bar Marsella"}}
 
 	googleServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -23,18 +23,20 @@ func TestGetPlacesSuccess(t *testing.T) {
 		}),
 	)
 	defer googleServer.Close()
-	client := GooglePlacesClient{googleServer.URL}
+	client := GooglePlacesClient{
+		BaseURL: googleServer.URL,
+	}
 	got, err := location.GetPlaces(client)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
-	if !reflect.DeepEqual(&expected, got) {
+	if !reflect.DeepEqual(expected, got) {
 		t.Errorf("expected %v, got %v", expected, got)
 	}
 }
 
-func newGooglePlacesSearchResponse(places Placelist) GooglePlacesSearchResponse {
+func newGooglePlacesSearchResponse(places []Place) GooglePlacesSearchResponse {
 	return GooglePlacesSearchResponse{
 		Results: []Result{
 			Result{

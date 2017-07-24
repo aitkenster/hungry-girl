@@ -57,7 +57,7 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	FBUserID, location, err := getUserDetails(r)
 	if err != nil {
 		if err.Error() == errNoLocation {
-			sendText(FBUserID, "send your location to get some delicious recommendations")
+			sendText(FBUserID, "Send your location to get some delicious recommendations!")
 			return
 		}
 		log.Println("error getting FB User details: ", err)
@@ -75,7 +75,7 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		sendText(FBUserID, fmt.Sprintf("%s %s", place.Name, place.Website))
+		sendText(FBUserID, fmt.Sprintf("%s, %v\n %s", place.Name, convertToStars(place.Rating), place.Website))
 	}
 }
 
@@ -104,15 +104,14 @@ func getUserDetails(r *http.Request) (string, *Location, error) {
 	}
 
 	userID := req.Entry[0].Messaging[0].Sender.ID
-	log.Println(userID)
 
 	message := req.Entry[0].Messaging[0].Message
 	if message.Attachments == nil {
-		return "", nil, errors.New(errNoLocation)
+		return userID, nil, errors.New(errNoLocation)
 	}
 
 	if message.Attachments[0].Type != "location" {
-		return "", nil, errors.New(errNoLocation)
+		return userID, nil, errors.New(errNoLocation)
 	}
 
 	lat := message.Attachments[0].Payload.Coordinates.Lat
@@ -158,4 +157,15 @@ func sendToMessenger(payload MessengerResponse) error {
 		return errors.New(fmt.Sprintf("error response from Messenger: ", string(body)))
 	}
 	return nil
+}
+
+func convertToStars(rating float64) string {
+	var stars string
+	for i := 0; i < int(rating); i++ {
+		stars += "★"
+	}
+	if float64(int64(rating)) != rating {
+		stars += " ½"
+	}
+	return stars
 }
