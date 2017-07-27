@@ -19,7 +19,29 @@ type FBUser struct {
 }
 
 type FBMessage struct {
-	Text string `json:"text"`
+	Text       string        `json:"text,omitempty"`
+	Attachment *FBAttachment `json:"attachment,omitempty"`
+}
+
+type FBAttachment struct {
+	Type    string    `json:"type,omitempty"`
+	Payload FBPayload `json:"payload,omitempty"`
+}
+
+type FBPayload struct {
+	TemplateType string             `json:"template_type,omitempty"`
+	Elements     []FBPayloadElement `json:"elements,omitempty"`
+}
+
+type FBPayloadElement struct {
+	Title         string          `json:"title,omitempty"`
+	DefaultAction FBDefaultAction `json:"default_action,omitempty"`
+	ImageUrl      string          `json:"image_url,omitempty"`
+}
+
+type FBDefaultAction struct {
+	Type string `json:"type"`
+	Url  string `json:"url"`
 }
 
 type MessengerResponse struct {
@@ -71,11 +93,12 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, place := range places {
-		err := place.GetWebsite(client)
+		err := place.GetDetails(client)
 		if err != nil {
 			fmt.Println(err)
 		}
-		sendText(FBUserID, fmt.Sprintf("%s, %v\n %s", place.Name, convertToStars(place.Rating), place.Website))
+		sendLocation(FBUserID, place.Name, place.Location)
+		sendText(FBUserID, fmt.Sprintf("%v\n%s", convertToStars(place.Rating), place.Website))
 	}
 }
 
@@ -128,6 +151,41 @@ func sendText(user, text string) {
 		},
 		Message: FBMessage{
 			Text: text,
+		},
+	}
+	err := sendToMessenger(resp)
+	if err != nil {
+		log.Println("error sending response to messenger: ", err)
+	}
+	return
+}
+
+func sendLocation(user string, title string, location Location) {
+	staticMapUrl := fmt.Sprintf("https://maps.googleapis.com/maps/api/staticmap?markers=color:red|label:B|%v,%v&size=360x360&zoom=13", location.Latitude, location.Longitude)
+	linkMapUrl := fmt.Sprintf("https://maps.google.com/?q=%v,%v", location.Latitude, location.Longitude)
+	attachment := FBAttachment{
+		Type: "template",
+		Payload: FBPayload{
+			TemplateType: "generic",
+			Elements: []FBPayloadElement{
+				{
+					Title: title,
+					DefaultAction: FBDefaultAction{
+						Type: "web_url",
+						Url:  linkMapUrl,
+					},
+					ImageUrl: staticMapUrl,
+				},
+			},
+		},
+	}
+
+	resp := MessengerResponse{
+		FBUser: FBUser{
+			ID: user,
+		},
+		Message: FBMessage{
+			Attachment: &attachment,
 		},
 	}
 	err := sendToMessenger(resp)

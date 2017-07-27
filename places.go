@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 )
@@ -15,15 +14,16 @@ const (
 )
 
 type Location struct {
-	Latitude  float64
-	Longitude float64
+	Latitude  float64 `json:"lat"`
+	Longitude float64 `json:"lng"`
 }
 
 type Place struct {
-	ID      string
-	Name    string
-	Website string
-	Rating  float64
+	ID       string
+	Name     string
+	Website  string
+	Rating   float64
+	Location Location
 }
 
 type GooglePlacesClient struct {
@@ -44,10 +44,15 @@ type GooglePlacesDetailsResponse struct {
 }
 
 type Result struct {
-	Name    string  `json:"name"`
-	ID      string  `json:"place_id"`
-	Website string  `json:"website"`
-	Rating  float64 `json:"rating"`
+	Name     string   `json:"name"`
+	ID       string   `json:"place_id"`
+	Website  string   `json:"website"`
+	Rating   float64  `json:"rating"`
+	Geometry Geometry `json:"geometry"`
+}
+
+type Geometry struct {
+	Location Location `json:"location"`
 }
 
 func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
@@ -79,9 +84,8 @@ func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
 	return p, nil
 }
 
-func (p *Place) GetWebsite(client GooglePlacesClient) error {
+func (p *Place) GetDetails(client GooglePlacesClient) error {
 	url := fmt.Sprintf("%s/details/json?placeid=%s&key=%s", client.BaseURL, p.ID, client.APIKey)
-	log.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
@@ -99,13 +103,14 @@ func (p *Place) GetWebsite(client GooglePlacesClient) error {
 	}
 	p.Website = g.Result.Website
 	p.Rating = g.Result.Rating
+	p.Location = g.Result.Geometry.Location
 	return nil
 }
 
 func NewGooglePlacesClient(c Config) GooglePlacesClient {
 	client := GooglePlacesClient{
 		BaseURL: "https://maps.googleapis.com/maps/api/place",
-		APIKey:  os.Getenv("GOOGLE_API_KEY"),
+		APIKey:  os.Getenv("GOOGLE_PLACES_API_KEY"),
 	}
 	if c.APIBaseURL != "" {
 		client.BaseURL = c.APIBaseURL
