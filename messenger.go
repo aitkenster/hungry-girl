@@ -97,7 +97,7 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		sendLocation(FBUserID, place.Name, place.Location)
+		sendLocation(FBUserID, place.Name, place.ID, place.Location)
 		sendText(FBUserID, fmt.Sprintf("%v\n%s", convertToStars(place.Rating), place.Website))
 	}
 }
@@ -160,9 +160,9 @@ func sendText(user, text string) {
 	return
 }
 
-func sendLocation(user string, title string, location Location) {
+func sendLocation(user, title, placeID string, location Location) {
 	staticMapUrl := fmt.Sprintf("https://maps.googleapis.com/maps/api/staticmap?markers=color:red|label:B|%v,%v&size=360x360&zoom=13", location.Latitude, location.Longitude)
-	linkMapUrl := fmt.Sprintf("https://maps.google.com/?q=%v,%v", location.Latitude, location.Longitude)
+	linkMapUrl := fmt.Sprintf("https://www.google.com/maps/place/?q=place_id:%s", placeID)
 	attachment := FBAttachment{
 		Type: "template",
 		Payload: FBPayload{

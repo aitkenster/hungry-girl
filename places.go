@@ -56,7 +56,7 @@ type Geometry struct {
 }
 
 func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
-	url := fmt.Sprintf("%s/nearbysearch/json?location=%v,%v&radius=500&types=food&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
+	url := fmt.Sprintf("%s/nearbysearch/json?location=%v,%v&radius=500&type=restaurant&opennow=true&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
