@@ -14,13 +14,19 @@ import (
 
 const errNoLocation = "no location sent"
 
+type MessengerResponse struct {
+	FBUser  FBUser    `json:"recipient"`
+	Message FBMessage `json:"message"`
+}
+
 type FBUser struct {
 	ID string `json:"id"`
 }
 
 type FBMessage struct {
-	Text       string        `json:"text,omitempty"`
-	Attachment *FBAttachment `json:"attachment,omitempty"`
+	Text        string         `json:"text,omitempty"`
+	Attachment  *FBAttachment  `json:"attachment,omitempty"`
+	Attachments []FBAttachment `json:"attachments,omitempty"`
 }
 
 type FBAttachment struct {
@@ -30,13 +36,19 @@ type FBAttachment struct {
 
 type FBPayload struct {
 	TemplateType string             `json:"template_type,omitempty"`
+	Coordinates  *FBCoordinates     `json:"coordinates,omitempty"`
 	Elements     []FBPayloadElement `json:"elements,omitempty"`
+}
+
+type FBCoordinates struct {
+	Lat  float64 `json:"lat,omitempty"`
+	Long float64 `json:"long,omitempty"`
 }
 
 type FBPayloadElement struct {
 	Title         string          `json:"title,omitempty"`
-	DefaultAction FBDefaultAction `json:"default_action,omitempty"`
 	ImageUrl      string          `json:"image_url,omitempty"`
+	DefaultAction FBDefaultAction `json:"default_action,omitempty"`
 }
 
 type FBDefaultAction struct {
@@ -44,28 +56,11 @@ type FBDefaultAction struct {
 	Url  string `json:"url"`
 }
 
-type MessengerResponse struct {
-	FBUser  FBUser    `json:"recipient"`
-	Message FBMessage `json:"message"`
-}
-
 type FBWebhookMsg struct {
 	Entry []struct {
 		Messaging []struct {
-			Sender struct {
-				ID string `json:"id"`
-			} `json:"sender"`
-			Message struct {
-				Attachments []struct {
-					Type    string `json:"type"`
-					Payload struct {
-						Coordinates struct {
-							Lat  float64 `json:"lat"`
-							Long float64 `json:"long"`
-						} `json:"coordinates"`
-					} `json:"payload"`
-				} `json:"attachments"`
-			} `json:"message"`
+			Sender  FBUser    `json:"sender"`
+			Message FBMessage `json:"message"`
 		} `json:"messaging"`
 	} `json:"entry"`
 }
@@ -97,7 +92,7 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		sendLocation(FBUserID, place.Name, place.ID, place.Location)
+		sendLocation(FBUserID, place)
 		sendText(FBUserID, fmt.Sprintf("%v\n%s", convertToStars(place.Rating), place.Website))
 	}
 }
@@ -112,7 +107,6 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "incorrect verification token")
 		return
 	}
-
 }
 
 func getUserDetails(r *http.Request) (string, *Location, error) {
@@ -145,57 +139,51 @@ func getUserDetails(r *http.Request) (string, *Location, error) {
 }
 
 func sendText(user, text string) {
-	resp := MessengerResponse{
-		FBUser: FBUser{
-			ID: user,
-		},
-		Message: FBMessage{
-			Text: text,
-		},
+	message := FBMessage{
+		Text: text,
 	}
-	err := sendToMessenger(resp)
+	err := sendToMessenger(user, message)
 	if err != nil {
-		log.Println("error sending response to messenger: ", err)
+		log.Println("error sending text response to messenger: ", err)
 	}
 	return
 }
 
-func sendLocation(user, title, placeID string, location Location) {
-	staticMapUrl := fmt.Sprintf("https://maps.googleapis.com/maps/api/staticmap?markers=color:red|label:B|%v,%v&size=360x360&zoom=13", location.Latitude, location.Longitude)
-	linkMapUrl := fmt.Sprintf("https://www.google.com/maps/place/?q=place_id:%s", placeID)
+func sendLocation(user string, p Place) {
 	attachment := FBAttachment{
 		Type: "template",
 		Payload: FBPayload{
 			TemplateType: "generic",
 			Elements: []FBPayloadElement{
 				{
-					Title: title,
+					Title: p.Name,
 					DefaultAction: FBDefaultAction{
 						Type: "web_url",
-						Url:  linkMapUrl,
+						Url:  p.LinkMapUrl(),
 					},
-					ImageUrl: staticMapUrl,
+					ImageUrl: p.StaticMapUrl(),
 				},
 			},
 		},
 	}
 
-	resp := MessengerResponse{
-		FBUser: FBUser{
-			ID: user,
-		},
-		Message: FBMessage{
-			Attachment: &attachment,
-		},
+	message := FBMessage{
+		Attachment: &attachment,
 	}
-	err := sendToMessenger(resp)
+	err := sendToMessenger(user, message)
 	if err != nil {
-		log.Println("error sending response to messenger: ", err)
+		log.Println("error sending location response to messenger: ", err)
 	}
 	return
 }
 
-func sendToMessenger(payload MessengerResponse) error {
+func sendToMessenger(user string, message FBMessage) error {
+	payload := MessengerResponse{
+		FBUser: FBUser{
+			ID: user,
+		},
+		Message: message,
+	}
 	buf, err := json.Marshal(payload)
 	if err != nil {
 		return err

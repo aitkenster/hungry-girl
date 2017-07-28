@@ -127,3 +127,11 @@ func getSuccessfulResponseFromGooglePlaces(url string) (*http.Response, error) {
 	}
 	return resp, nil
 }
+
+func (p *Place) StaticMapUrl() string {
+	return fmt.Sprintf("https://maps.googleapis.com/maps/api/staticmap?markers=color:red|label:B|%v,%v&size=360x360&zoom=13", p.Location.Latitude, p.Location.Longitude)
+}
+
+func (p *Place) LinkMapUrl() string {
+	return fmt.Sprintf("https://www.google.com/maps/place/?q=place_id:%s", p.ID)
+}

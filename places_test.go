@@ -74,6 +74,31 @@ func TestGetPlaceDetailsSuccess(t *testing.T) {
 	}
 }
 
+func TestStaticMapUrl(t *testing.T) {
+	place := Place{
+		Location: Location{
+			Latitude:  37.483872693672,
+			Longitude: -122.14900441942,
+		},
+	}
+	got := place.StaticMapUrl()
+	expected := "https://maps.googleapis.com/maps/api/staticmap?markers=color:red|label:B|37.483872693672,-122.14900441942&size=360x360&zoom=13"
+	if got != expected {
+		t.Errorf("expected to get static map url %s, got %s", expected, got)
+	}
+}
+
+func TestLinkMapUrl(t *testing.T) {
+	place := Place{
+		ID: "rgejh446wrsDGNRmsw5",
+	}
+	got := place.LinkMapUrl()
+	expected := "https://www.google.com/maps/place/?q=place_id:rgejh446wrsDGNRmsw5"
+	if got != expected {
+		t.Errorf("expected to get static map url %s, got %s", expected, got)
+	}
+}
+
 func newGooglePlacesSearchResponse(places []Place) GooglePlacesSearchResponse {
 	return GooglePlacesSearchResponse{
 		Results: []Place{
