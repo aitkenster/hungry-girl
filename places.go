@@ -19,10 +19,11 @@ type Location struct {
 }
 
 type Place struct {
-	ID       string
-	Name     string
-	Website  string
-	Rating   float64
+	Name     string   `json:"name"`
+	ID       string   `json:"place_id"`
+	Website  string   `json:"website"`
+	Rating   float64  `json:"rating"`
+	Geometry Geometry `json:"geometry"`
 	Location Location
 }
 
@@ -36,19 +37,11 @@ type errorResponse struct {
 }
 
 type GooglePlacesSearchResponse struct {
-	Results []Result `json:"results"`
+	Results []Place `json:"results"`
 }
 
 type GooglePlacesDetailsResponse struct {
-	Result Result `json:"result"`
-}
-
-type Result struct {
-	Name     string   `json:"name"`
-	ID       string   `json:"place_id"`
-	Website  string   `json:"website"`
-	Rating   float64  `json:"rating"`
-	Geometry Geometry `json:"geometry"`
+	Place Place `json:"result"`
 }
 
 type Geometry struct {
@@ -57,19 +50,18 @@ type Geometry struct {
 
 func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
 	url := fmt.Sprintf("%s/nearbysearch/json?location=%v,%v&radius=500&type=restaurant&opennow=true&key=%s", client.BaseURL, l.Latitude, l.Longitude, client.APIKey)
-	resp, err := http.Get(url)
+
+	resp, err := getSuccessfulResponseFromGooglePlaces(url)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println(resp.StatusCode)
-		return nil, errors.New("error retrieving Google Places response")
-	}
+
 	var g GooglePlacesSearchResponse
 	err = json.NewDecoder(resp.Body).Decode(&g)
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	var p []Place
 	numPlaces := 0
 	for _, result := range g.Results {
@@ -86,24 +78,22 @@ func (l Location) GetPlaces(client GooglePlacesClient) ([]Place, error) {
 
 func (p *Place) GetDetails(client GooglePlacesClient) error {
 	url := fmt.Sprintf("%s/details/json?placeid=%s&key=%s", client.BaseURL, p.ID, client.APIKey)
-	resp, err := http.Get(url)
+	resp, err := getSuccessfulResponseFromGooglePlaces(url)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println(resp.StatusCode)
-		return errors.New("error retrieving Google Places response")
-	}
+
 	var g GooglePlacesDetailsResponse
 	err = json.NewDecoder(resp.Body).Decode(&g)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	p.Website = g.Result.Website
-	p.Rating = g.Result.Rating
-	p.Location = g.Result.Geometry.Location
+
+	p.Website = g.Place.Website
+	p.Rating = g.Place.Rating
+	p.Location = g.Place.Geometry.Location
 	return nil
 }
 
@@ -125,4 +115,15 @@ func NewLocation(latitude, longitude float64) (*Location, error) {
 	}
 
 	return &l, nil
+}
+
+func getSuccessfulResponseFromGooglePlaces(url string) (*http.Response, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("error retrieving Google Places response")
+	}
+	return resp, nil
 }
