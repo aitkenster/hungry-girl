@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestGetPlacesSuccess(t *testing.T) {
+func TestGetPlacesFromGoogleSuccess(t *testing.T) {
 	location := Location{
 		Latitude:  37.483872693672,
 		Longitude: -122.14900441942,
@@ -26,7 +26,7 @@ func TestGetPlacesSuccess(t *testing.T) {
 	client := GooglePlacesClient{
 		BaseURL: googleServer.URL,
 	}
-	got, err := location.GetPlaces(client)
+	got, err := location.GetPlacesFromGoogle(client)
 	if err != nil {
 		t.Errorf(err.Error())
 	}

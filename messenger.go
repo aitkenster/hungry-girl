@@ -82,19 +82,36 @@ func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := NewGooglePlacesClient(Config{})
-	places, err := location.GetPlaces(client)
+	googleRecommendations, err := location.GetPlacesFromGoogle(client)
+	if err != nil {
+		log.Fatal("error accessing db: ", err)
+		return
+	}
+	curatedRecommendations, err := GetPlacesFromDB(DB, *location)
 	if err != nil {
 		fmt.Println(err)
 	}
 
+	if len(curatedRecommendations) != 0 {
+		sendText(FBUserID, "I've been researching this area! I recommend...")
+		sendPlaces(curatedRecommendations, client, FBUserID)
+		return
+	}
+	sendText(FBUserID, "I don't have any recommendations in this area, but this is what turns up on Google...")
+	sendPlaces(googleRecommendations, client, FBUserID)
+}
+
+func sendPlaces(places []Place, client GooglePlacesClient, FBUserID string) {
 	for _, place := range places {
 		err := place.GetDetails(client)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		sendLocation(FBUserID, place)
 		sendText(FBUserID, fmt.Sprintf("%v\n%s", convertToStars(place.Rating), place.Website))
 	}
+
 }
 
 func verifyToken(w http.ResponseWriter, r *http.Request) {
