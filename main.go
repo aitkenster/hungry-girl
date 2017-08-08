@@ -27,6 +27,11 @@ func main() {
 
 	http.HandleFunc("/messenger", MessengerRequestHandler)
 
+	err = setPersistentMenu()
+	if err != nil {
+		log.Printf("could not set persistent menu:", err)
+	}
+
 	port := os.Getenv("PORT")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }

@@ -65,6 +65,19 @@ type FBWebhookMsg struct {
 	} `json:"entry"`
 }
 
+type ThreadSetting struct {
+	SettingType   string         `json:"setting_type"`
+	ThreadState   string         `json:"thread_state"`
+	CallToActions []CallToAction `json:"call_to_actions"`
+}
+
+type CallToAction struct {
+	Type    string `json:"type"`
+	Title   string `json:"title"`
+	Payload string `json:"payload"`
+	Url     string `json:"url"`
+}
+
 func MessengerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Message recieved")
 	if r.URL.Query().Get("hub.verify_token") != "" {
@@ -207,7 +220,33 @@ func sendToMessenger(user string, message FBMessage) error {
 	}
 
 	url := fmt.Sprintf("https://graph.facebook.com/v2.8/me/messages?access_token=%s", os.Getenv("FB_PAGE_TOKEN"))
-	resp, err := http.Post(url, "application/json; charset=utf-8", bytes.NewReader(buf))
+	return post(url, buf)
+}
+
+func setPersistentMenu() error {
+	threadSetting := ThreadSetting{
+		SettingType: "call_to_actions",
+		ThreadState: "existing_thread",
+		CallToActions: []CallToAction{
+			CallToAction{
+				Type:  "web_url",
+				Title: "Make a recommendation",
+				Url:   "https://nicolaa.typeform.com/to/noVPUi",
+			},
+		},
+	}
+
+	url := fmt.Sprintf("https://graph.facebook.com/%s/thread_settings?access_token=%s", os.Getenv("FB_PAGE_ID"), os.Getenv("FB_PAGE_TOKEN"))
+
+	payload, err := json.Marshal(threadSetting)
+	if err != nil {
+		return err
+	}
+	return post(url, payload)
+}
+
+func post(url string, payload []byte) error {
+	resp, err := http.Post(url, "application/json; charset=utf-8", bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
